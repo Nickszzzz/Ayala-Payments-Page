@@ -41,12 +41,14 @@ interface Filters {
   search: string;
   payment_date: string;
   location_name: string;
+  customer_name: string;
 }
 
 const initialFilters: Filters = {
   search: "",
   payment_date: "",
   location_name: "",
+  customer_name: "",
 };
 
 import {
@@ -109,25 +111,25 @@ const PaymentLists = () => {
     }
   };
 
-  useEffect(() => {
-    let total: number = 0;
-    data.forEach((transaction) => {
-      total += parseFloat(transaction.payment_amount);
-    });
+  // useEffect(() => {
+  //   let total: number = 0;
+  //   data.forEach((transaction) => {
+  //     total += parseFloat(transaction.payment_amount);
+  //   });
 
-    let totalSales: number = 0;
-    data.forEach((transaction) => {
-      if (
-        transaction.order_status === "ayala_approved" ||
-        transaction.order_status === "cancel_request" ||
-        transaction.order_status === "denied_request"
-      ) {
-        totalSales += parseFloat(transaction.payment_amount);
-      }
-    });
-    setTotalPaymentRecieved(total);
-    setTotalPaymentSales(totalSales);
-  }, [data]); // Empty dependency array ensures this effect runs only once on mount
+  //   let totalSales: number = 0;
+  //   data.forEach((transaction) => {
+  //     if (
+  //       transaction.order_status === "ayala_approved" ||
+  //       transaction.order_status === "cancel_request" ||
+  //       transaction.order_status === "denied_request"
+  //     ) {
+  //       totalSales += parseFloat(transaction.payment_amount);
+  //     }
+  //   });
+  //   setTotalPaymentRecieved(total);
+  //   setTotalPaymentSales(totalSales);
+  // }, [data]); // Empty dependency array ensures this effect runs only once on mount
 
   useEffect(() => {
     fetchData();
@@ -143,6 +145,7 @@ const PaymentLists = () => {
   const handleSearch = () => {
     let newFilters = [
       { id: "location_name", value: filters.location_name },
+      { id: "customer_name", value: filters.customer_name },
       {
         id: "payment_date",
         value: filters.payment_date ? filters.payment_date.split(" ")[0] : null,
@@ -187,8 +190,43 @@ const PaymentLists = () => {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
+  useEffect(() => {
+    if (!table) return; // Guard clause to ensure `table` is initialized
+    const rows = table.getFilteredRowModel().rows.map((row) => row.original);
+
+    let total: number = 0;
+    let totalSales: number = 0;
+
+    rows.forEach((transaction) => {
+      const paymentAmount = parseFloat(transaction.payment_amount);
+      console.log(paymentAmount);
+
+      total += paymentAmount;
+
+      if (
+        transaction.order_status === "ayala_approved" ||
+        transaction.order_status === "cancel_request" ||
+        transaction.order_status === "denied_request"
+      ) {
+        totalSales += paymentAmount;
+      }
+    });
+
+    setTotalPaymentRecieved(total);
+    setTotalPaymentSales(totalSales);
+  }, [
+    table.getRowModel().rows, // Trigger effect when table rows change
+    sorting,
+    columnFilters,
+    globalFilter,
+    columnVisibility,
+    rowSelection,
+    data, // Optional, in case `data` directly affects the table's data
+  ]);
+
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const [uniqueLocationNames, setUniqueLocationNames] = useState<any>();
+  const [uniqueCustomerNames, setUniqueCustomerNames] = useState<any>();
 
   useEffect(() => {
     if (data) {
@@ -199,6 +237,17 @@ const PaymentLists = () => {
           if (!uniqueNames.includes(locationName)) {
             // @ts-ignore
             uniqueNames.push(locationName);
+          }
+          return uniqueNames;
+        }, [])
+      );
+      setUniqueCustomerNames(
+        table.getRowModel().rows.reduce((uniqueNames, row) => {
+          const customerName = row.getValue("customer_name");
+          // @ts-ignore
+          if (!uniqueNames.includes(customerName)) {
+            // @ts-ignore
+            uniqueNames.push(customerName);
           }
           return uniqueNames;
         }, [])
@@ -368,6 +417,43 @@ const PaymentLists = () => {
                           className="capitalize w-full"
                           onCheckedChange={(value) =>
                             setFilters({ ...filters, location_name: row })
+                          }
+                        >
+                          {row}
+                        </DropdownMenuCheckboxItem>
+                      );
+                    })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <div className="col-span-1 sm:col-span-2  md:col-span-2  justify-between text-sm text-secondary flex-grow basis-full md:basis-none relative">
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between text-sm text-secondary"
+                    >
+                      {filters.customer_name || "Customer Name"}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  {filters.customer_name && (
+                    <IoCloseCircle
+                      className="text-red-400 w-4 h-4 absolute right-3 cursor-pointer top-3"
+                      onClick={() => {
+                        resetFilterItem("customer_name");
+                      }}
+                    />
+                  )}
+                </div>
+                <DropdownMenuContent align="start" className="w-60">
+                  {data &&
+                    uniqueCustomerNames &&
+                    uniqueCustomerNames.map((row: any) => {
+                      return (
+                        <DropdownMenuCheckboxItem
+                          key={row}
+                          className="capitalize w-full"
+                          onCheckedChange={(value) =>
+                            setFilters({ ...filters, customer_name: row })
                           }
                         >
                           {row}

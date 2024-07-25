@@ -13,6 +13,7 @@ interface Payment {
   order_status: string;
   initial: string;
   location_name: string;
+  customer_name: string;
   payment_date: string;
 }
 
@@ -129,6 +130,31 @@ const columns: ColumnDef<Payment>[] = [
           className={`capitalize text-xs font-medium text-gray-900 `}
         >
           {row.getValue("location_name")}
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "customer_name",
+    header: ({ column }) => {
+      return (
+        <Button
+          className="p-0 hover:bg-transparent"
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Customer
+          <HiMiniChevronUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      return (
+        <div
+          // @ts-ignore
+          className={`capitalize text-xs font-medium text-gray-900 `}
+        >
+          {row.getValue("customer_name")}
         </div>
       );
     },
